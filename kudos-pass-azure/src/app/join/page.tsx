@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveParticipant } from '@/lib/client-store';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function JoinPage() {
   const router = useRouter();
@@ -36,16 +38,16 @@ export default function JoinPage() {
       <h1 className="text-2xl font-semibold">Join Session</h1>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm font-medium">Session code
-          <input className="mt-1 w-full border rounded px-3 py-2 uppercase" value={sessionCode} onChange={(e) => setSessionCode(e.target.value)} />
+          <Input className="mt-1 uppercase" value={sessionCode} onChange={(e) => setSessionCode(e.target.value)} />
         </label>
         <label className="block text-sm font-medium">Name
-          <input className="mt-1 w-full border rounded px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="block text-sm font-medium">Email (optional)
-          <input className="mt-1 w-full border rounded px-3 py-2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input className="mt-1" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         {error && <p className="text-red-600 text-sm">{error}</p>}
-        <button disabled={loading} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60">{loading ? 'Joining...' : 'Join'}</button>
+        <Button disabled={loading}>{loading ? 'Joining...' : 'Join'}</Button>
       </form>
     </main>
   );
