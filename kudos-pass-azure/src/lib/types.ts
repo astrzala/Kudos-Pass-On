@@ -16,6 +16,7 @@ export type SessionDoc = {
   createdAt: string;
   lastActivityUtc: string;
   adminToken: string;
+  submissionLocked?: boolean;
   _ttl?: number;
 };
 

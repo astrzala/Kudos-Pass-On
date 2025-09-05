@@ -26,6 +26,10 @@ export function useSessionRealtime(sessionCode: string, onEvent: (e: EventPayloa
             if (data && data.event) onEvent(data as EventPayload);
           } catch {}
         };
+        ws.onopen = () => {
+          setConnected(true);
+          try { ws.send(JSON.stringify({ type: 'joinGroup', group: `session:${sessionCode}` })); } catch {}
+        };
       } catch {
         startPolling();
       }

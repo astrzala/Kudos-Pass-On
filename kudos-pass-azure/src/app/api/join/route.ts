@@ -5,8 +5,10 @@ import { newId } from '@/lib/ids';
 import { nowIso } from '@/lib/time';
 import type { ParticipantDoc, SessionDoc } from '@/lib/types';
 import { publishSessionEvent } from '@/lib/webpubsub';
+import { rateLimitOrThrow } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  try { rateLimitOrThrow(req as any); } catch (e: any) { return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 }); }
   const body = await req.json();
   const parsed = joinSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });

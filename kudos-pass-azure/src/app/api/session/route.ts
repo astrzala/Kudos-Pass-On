@@ -5,8 +5,10 @@ import { nowIso } from '@/lib/time';
 import { upsertItem, readItemsByQuery } from '@/lib/cosmos';
 import { publishSessionEvent } from '@/lib/webpubsub';
 import type { ParticipantDoc, RoundDoc, SessionDoc, NoteDoc } from '@/lib/types';
+import { rateLimitOrThrow } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  try { rateLimitOrThrow(req as any); } catch (e: any) { return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 }); }
   const body = await req.json();
   const parsed = createSessionSchema.safeParse(body);
   if (!parsed.success) {
@@ -62,7 +64,9 @@ export async function GET(req: NextRequest) {
   const session = sessions[0] ?? null;
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const hydrate = { session, participants, currentRound: rounds[0] ?? null, notes };
+  const { adminToken: _admin, ...sessionPublic } = session as any;
+  const participantsPublic = participants.map(({ email: _email, ...rest }) => rest);
+  const hydrate = { session: sessionPublic, participants: participantsPublic, currentRound: rounds[0] ?? null, notes };
   const etag = 'W/"' + Buffer.from(JSON.stringify({
     s: session.lastActivityUtc,
     p: participants.length,

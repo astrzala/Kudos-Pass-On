@@ -6,8 +6,10 @@ import { checkPositivity } from '@/lib/positivity';
 import { newId } from '@/lib/ids';
 import { nowIso } from '@/lib/time';
 import { publishSessionEvent } from '@/lib/webpubsub';
+import { rateLimitOrThrow } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  try { rateLimitOrThrow(req as any, 'note'); } catch (e: any) { return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 }); }
   const body = await req.json();
   const parsed = noteSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -16,6 +18,8 @@ export async function POST(req: NextRequest) {
   const sessions = await readItemsByQuery<SessionDoc>('SELECT TOP 1 * FROM c WHERE c.type = "Session" AND c.sessionCode = @code', [{ name: '@code', value: sessionCode }]);
   const session = sessions[0];
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+  if (session.status === 'finished') return NextResponse.json({ error: 'Session ended' }, { status: 400 });
+  if (session.submissionLocked) return NextResponse.json({ error: 'Submissions locked' }, { status: 403 });
 
   const rounds = await readItemsByQuery<RoundDoc>('SELECT TOP 1 * FROM c WHERE c.type = "Round" AND c.sessionCode = @code ORDER BY c.index DESC', [{ name: '@code', value: sessionCode }]);
   const round = rounds[0];

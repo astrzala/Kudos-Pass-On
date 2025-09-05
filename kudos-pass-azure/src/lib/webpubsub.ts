@@ -19,10 +19,10 @@ export async function publishSessionEvent(sessionCode: string, event: string, pa
   await svc.group(group).sendToAll({ event, payload });
 }
 
-export function negotiateUrl(userId: string): string | null {
+export async function negotiateUrl(userId: string): Promise<string | null> {
   const svc = getClient();
   if (!svc) return null;
-  const token = svc.getClientAccessToken({
+  const token = await svc.getClientAccessToken({
     userId,
     roles: [
       'webpubsub.joinLeaveGroup',

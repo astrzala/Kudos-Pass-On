@@ -1,4 +1,4 @@
-import { CosmosClient, Database, Container } from '@azure/cosmos';
+import { CosmosClient, Database, Container, ItemDefinition } from '@azure/cosmos';
 import { getEnv } from './env';
 
 let containerPromise: Promise<Container> | null = null;
@@ -32,11 +32,11 @@ export async function readItemsByQuery<T>(query: string, parameters: { name: str
   return resources;
 }
 
-export async function readItemById<T>(id: string, partitionKey: string): Promise<T | null> {
+export async function readItemById<T extends ItemDefinition = ItemDefinition>(id: string, partitionKey: string): Promise<T | null> {
   const container = await getContainer();
   try {
     const { resource } = await container.item(id, partitionKey).read<T>();
-    return resource ?? null;
+    return (resource as T | undefined) ?? null;
   } catch (err: any) {
     if (err.code === 404) return null;
     throw err;
