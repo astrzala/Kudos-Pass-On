@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { noteSchema } from '@/lib/zod-schemas';
-import { readItemsByQuery, upsertItem } from '@/lib/cosmos';
+import { mongoFindMany, mongoFindOne, mongoUpsert } from '@/lib/mongo';
 import type { NoteDoc, RoundDoc, SessionDoc } from '@/lib/types';
 import { checkPositivity } from '@/lib/positivity';
 import { newId } from '@/lib/ids';
@@ -15,14 +15,12 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   const { sessionCode, authorId, text } = parsed.data;
 
-  const sessions = await readItemsByQuery<SessionDoc>('SELECT TOP 1 * FROM c WHERE c.type = "Session" AND c.sessionCode = @code', [{ name: '@code', value: sessionCode }]);
-  const session = sessions[0];
+  const session = await mongoFindOne<SessionDoc>({ type: 'Session', sessionCode });
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   if (session.status === 'finished') return NextResponse.json({ error: 'Session ended' }, { status: 400 });
   if (session.submissionLocked) return NextResponse.json({ error: 'Submissions locked' }, { status: 403 });
 
-  const rounds = await readItemsByQuery<RoundDoc>('SELECT TOP 1 * FROM c WHERE c.type = "Round" AND c.sessionCode = @code ORDER BY c.index DESC', [{ name: '@code', value: sessionCode }]);
-  const round = rounds[0];
+  const round = await mongoFindOne<RoundDoc>({ type: 'Round', sessionCode }, { sort: { index: -1 } });
   if (!round) return NextResponse.json({ error: 'No active round' }, { status: 400 });
 
   const mapping = round.mappings.find((m) => m.from === authorId);
@@ -44,9 +42,9 @@ export async function POST(req: NextRequest) {
     softDeleted: false,
     _ttl: 86400,
   };
-  await upsertItem(note);
+  await mongoUpsert({ ...note, expireAt: new Date(Date.now() + 86400 * 1000) });
   session.lastActivityUtc = now;
-  await upsertItem(session);
+  await mongoUpsert({ ...session, expireAt: new Date(Date.now() + 86400 * 1000) });
   await publishSessionEvent(sessionCode, 'note:submitted', { noteId: note.id, roundIndex: note.roundIndex });
 
   return NextResponse.json({ ok: true, noteId: note.id });

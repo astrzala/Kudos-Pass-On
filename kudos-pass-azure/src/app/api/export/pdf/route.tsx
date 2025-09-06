@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readItemsByQuery } from '@/lib/cosmos';
+import { mongoFindMany, mongoFindOne } from '@/lib/mongo';
 import type { NoteDoc, ParticipantDoc, SessionDoc } from '@/lib/types';
 import { renderToStream, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
@@ -9,12 +9,11 @@ export async function GET(req: NextRequest) {
   const me = searchParams.get('me');
   if (!code || !me) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
 
-  const [sessionArr, notes, parts] = await Promise.all([
-    readItemsByQuery<SessionDoc>('SELECT TOP 1 * FROM c WHERE c.type = "Session" AND c.sessionCode = @code', [{ name: '@code', value: code }]),
-    readItemsByQuery<NoteDoc>('SELECT * FROM c WHERE c.type = "Note" AND c.sessionCode = @code AND c.targetId = @me AND (NOT IS_DEFINED(c.softDeleted) OR c.softDeleted = false) ORDER BY c.createdAt ASC', [{ name: '@code', value: code }, { name: '@me', value: me }]),
-    readItemsByQuery<ParticipantDoc>('SELECT * FROM c WHERE c.type = "Participant" AND c.sessionCode = @code', [{ name: '@code', value: code }]),
+  const [session, notes, parts] = await Promise.all([
+    mongoFindOne<SessionDoc>({ type: 'Session', sessionCode: code }),
+    mongoFindMany<NoteDoc>({ type: 'Note', sessionCode: code, targetId: me, $or: [{ softDeleted: { $exists: false } }, { softDeleted: false }] }, { sort: { createdAt: 1 } }),
+    mongoFindMany<ParticipantDoc>({ type: 'Participant', sessionCode: code }),
   ]);
-  const session = sessionArr[0];
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const byId = new Map(parts.map(p => [p.id, p] as const));
 
