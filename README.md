@@ -23,7 +23,7 @@ Set in App Service Configuration:
 - `WEBPUBSUB_CONN_STRING` (optional; enables realtime)
 - `WEBPUBSUB_HUB=kudos`
 - `ORIGIN_URL=https://<your-app>.azurewebsites.net`
-- `NODE_ENV=production`
+- `NODE_ENV=production` 
 
 ## Local
 ```bash
