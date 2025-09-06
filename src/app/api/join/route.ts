@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { joinSchema } from '@/lib/zod-schemas';
+
 import { mongoFindOne, mongoUpsert } from '@/lib/mongo';
 import { newId } from '@/lib/ids';
 import { nowIso } from '@/lib/time';
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   const { sessionCode, name, email } = parsed.data;
 
+
   const session = await mongoFindOne<SessionDoc>({ type: 'Session', sessionCode });
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
 
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest) {
     createdAt: now,
     _ttl: 86400,
   };
+
 
   await mongoUpsert({ ...participant, expireAt: new Date(Date.now() + 86400 * 1000) });
   session.lastActivityUtc = now;

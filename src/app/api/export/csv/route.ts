@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     mongoFindMany<NoteDoc>({ type: 'Note', sessionCode: code, $or: [{ softDeleted: { $exists: false } }, { softDeleted: false }] }),
     mongoFindMany<ParticipantDoc>({ type: 'Participant', sessionCode: code }),
   ]);
+
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const byId = new Map(parts.map(p => [p.id, p] as const));
 

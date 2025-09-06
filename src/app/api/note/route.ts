@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   const { sessionCode, authorId, text } = parsed.data;
 
+
   const session = await mongoFindOne<SessionDoc>({ type: 'Session', sessionCode });
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   if (session.status === 'finished') return NextResponse.json({ error: 'Session ended' }, { status: 400 });

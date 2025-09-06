@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { mongoFindMany, mongoFindOne } from '@/lib/mongo';
 import type { NoteDoc, ParticipantDoc, SessionDoc } from '@/lib/types';
 import { renderToStream, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
@@ -8,6 +9,7 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code');
   const me = searchParams.get('me');
   if (!code || !me) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
+
 
   const [session, notes, parts] = await Promise.all([
     mongoFindOne<SessionDoc>({ type: 'Session', sessionCode: code }),

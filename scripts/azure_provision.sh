@@ -20,6 +20,7 @@ echo "App Name:       $APP_NAME"
 
 az group create -n "$RG_NAME" -l "$LOCATION" 1>/dev/null
 
+
 echo "Creating Cosmos DB (API for MongoDB) ..."
 az cosmosdb create -g "$RG_NAME" -n "$COSMOS_ACCOUNT" --kind MongoDB --server-version 7.0 --enable-free-tier true 1>/dev/null
 az cosmosdb mongodb database create -a "$COSMOS_ACCOUNT" -g "$RG_NAME" -n "$COSMOS_DB" 1>/dev/null
@@ -34,6 +35,7 @@ az appservice plan create -g "$RG_NAME" -n "$PLAN_NAME" --sku F1 --is-linux 1>/d
 
 echo "Creating Web App (Node 20 LTS) ..."
 az webapp create -g "$RG_NAME" -p "$PLAN_NAME" -n "$APP_NAME" --runtime "NODE|20-lts" 1>/dev/null
+
 
 COSMOS_CONN_STRING=$(az cosmosdb keys list -n "$COSMOS_ACCOUNT" -g "$RG_NAME" --type connection-strings --query "connectionStrings[?description=='MongoDB shell connection string'].connectionString | [0]" -o tsv)
 WEBPUBSUB_CONN_STRING=$(az webpubsub key show -n "$WEBPUBSUB_NAME" -g "$RG_NAME" --query primaryConnectionString -o tsv)
