@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { startRoundSchema } from '@/lib/zod-schemas';
-import { readItemsByQuery, upsertItem } from '@/lib/cosmos';
+import { mongoFindMany, mongoFindOne, mongoUpsert } from '@/lib/mongo';
 import type { ParticipantDoc, RoundDoc, SessionDoc } from '@/lib/types';
 import { generateDerangement } from '@/lib/derangement';
 import { newId } from '@/lib/ids';
@@ -17,13 +17,11 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   const { sessionCode } = parsed.data;
 
-  const [sessions, participants, previousRounds] = await Promise.all([
-    readItemsByQuery<SessionDoc>('SELECT TOP 1 * FROM c WHERE c.type = "Session" AND c.sessionCode = @code', [{ name: '@code', value: sessionCode }]),
-    readItemsByQuery<ParticipantDoc>('SELECT * FROM c WHERE c.type = "Participant" AND c.sessionCode = @code', [{ name: '@code', value: sessionCode }]),
-    readItemsByQuery<RoundDoc>('SELECT * FROM c WHERE c.type = "Round" AND c.sessionCode = @code ORDER BY c.index ASC', [{ name: '@code', value: sessionCode }]),
+  const [session, participants, previousRounds] = await Promise.all([
+    mongoFindOne<SessionDoc>({ type: 'Session', sessionCode }),
+    mongoFindMany<ParticipantDoc>({ type: 'Participant', sessionCode }),
+    mongoFindMany<RoundDoc>({ type: 'Round', sessionCode }, { sort: { index: 1 } }),
   ]);
-
-  const session = sessions[0];
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   if (session.adminToken !== adminToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -50,7 +48,10 @@ export async function POST(req: NextRequest) {
   session.status = 'running';
   session.lastActivityUtc = now;
 
-  await Promise.all([upsertItem(round), upsertItem(session)]);
+  await Promise.all([
+    mongoUpsert({ ...round, expireAt: new Date(Date.now() + 86400 * 1000) }),
+    mongoUpsert({ ...session, expireAt: new Date(Date.now() + 86400 * 1000) })
+  ]);
   await publishSessionEvent(sessionCode, 'round:start', { roundIndex: round.index, roundStartUtc: now, roundSeconds: session.settings.roundSeconds });
 
   return NextResponse.json({ ok: true, roundIndex: round.index, roundStartUtc: now });

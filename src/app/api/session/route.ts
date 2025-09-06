@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSessionSchema } from '@/lib/zod-schemas';
 import { newAdminToken, newId, newSessionCode } from '@/lib/ids';
 import { nowIso } from '@/lib/time';
-import { upsertItem, readItemsByQuery } from '@/lib/cosmos';
+import { ensureIndexes, mongoFindMany, mongoFindOne, mongoUpsert } from '@/lib/mongo';
 import { publishSessionEvent } from '@/lib/webpubsub';
 import type { ParticipantDoc, RoundDoc, SessionDoc, NoteDoc } from '@/lib/types';
 import { rateLimitOrThrow } from '@/lib/rate-limit';
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { title, settings } = parsed.data;
+  await ensureIndexes();
   const sessionCode = newSessionCode(6 + Math.floor(Math.random() * 3));
   const id = newId('sess');
   const adminToken = newAdminToken();
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     _ttl: 86400,
   };
 
-  await upsertItem(session);
+  await mongoUpsert({ ...session, expireAt: new Date(Date.now() + 86400 * 1000) });
   await publishSessionEvent(sessionCode, 'session:update', { session });
 
   return NextResponse.json({ sessionCode, adminToken });
@@ -46,22 +47,13 @@ export async function GET(req: NextRequest) {
   const sessionCode = searchParams.get('code');
   if (!sessionCode) return NextResponse.json({ error: 'Missing code' }, { status: 400 });
 
-  const [sessions, participants, rounds, notes] = await Promise.all([
-    readItemsByQuery<SessionDoc>('SELECT TOP 1 * FROM c WHERE c.type = "Session" AND c.sessionCode = @code', [
-      { name: '@code', value: sessionCode },
-    ]),
-    readItemsByQuery<ParticipantDoc>('SELECT * FROM c WHERE c.type = "Participant" AND c.sessionCode = @code', [
-      { name: '@code', value: sessionCode },
-    ]),
-    readItemsByQuery<RoundDoc>('SELECT * FROM c WHERE c.type = "Round" AND c.sessionCode = @code ORDER BY c.index DESC', [
-      { name: '@code', value: sessionCode },
-    ]),
-    readItemsByQuery<NoteDoc>('SELECT TOP 200 * FROM c WHERE c.type = "Note" AND c.sessionCode = @code AND (NOT IS_DEFINED(c.softDeleted) OR c.softDeleted = false) ORDER BY c.createdAt DESC', [
-      { name: '@code', value: sessionCode },
-    ]),
+  await ensureIndexes();
+  const [session, participants, rounds, notes] = await Promise.all([
+    mongoFindOne<SessionDoc>({ type: 'Session', sessionCode }),
+    mongoFindMany<ParticipantDoc>({ type: 'Participant', sessionCode }),
+    mongoFindMany<RoundDoc>({ type: 'Round', sessionCode }, { sort: { index: -1 } }),
+    mongoFindMany<NoteDoc>({ type: 'Note', sessionCode, $or: [{ softDeleted: { $exists: false } }, { softDeleted: false }] }, { sort: { createdAt: -1 }, limit: 200 }),
   ]);
-
-  const session = sessions[0] ?? null;
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const { adminToken: _admin, ...sessionPublic } = session as any;
