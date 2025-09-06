@@ -16,18 +16,28 @@ export async function publishSessionEvent(sessionCode: string, event: string, pa
   const svc = getClient();
   if (!svc) return;
   const group = `session:${sessionCode}`;
-  await svc.group(group).sendToAll({ event, payload });
+  try {
+    await svc.group(group).sendToAll({ event, payload });
+  } catch (err: any) {
+    console.error('WebPubSub sendToAll failed', { sessionCode, event, message: err?.message });
+    throw err;
+  }
 }
 
 export async function negotiateUrl(userId: string): Promise<string | null> {
   const svc = getClient();
   if (!svc) return null;
-  const token = await svc.getClientAccessToken({
-    userId,
-    roles: [
-      'webpubsub.joinLeaveGroup',
-    ],
-  });
-  return token.url;
+  try {
+    const token = await svc.getClientAccessToken({
+      userId,
+      roles: [
+        'webpubsub.joinLeaveGroup',
+      ],
+    });
+    return token.url;
+  } catch (err: any) {
+    console.error('WebPubSub negotiate failed', { userId, message: err?.message });
+    throw err;
+  }
 }
 

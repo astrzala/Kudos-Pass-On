@@ -9,14 +9,31 @@ import { rateLimitOrThrow } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try { rateLimitOrThrow(req as any); } catch (e: any) { return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 }); }
+  const reqId = newId('req');
   const body = await req.json();
   const parsed = createSessionSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid payload', reqId }, { status: 400 });
   }
 
+  const debugEnv = {
+    hasCOSMOS_CONN_STRING: !!process.env.COSMOS_CONN_STRING,
+    COSMOS_DB_NAME: process.env.COSMOS_DB_NAME,
+    COSMOS_CONTAINER_NAME: process.env.COSMOS_CONTAINER_NAME,
+    has_WEBPUBSUB_CONN_STRING: !!process.env.WEBPUBSUB_CONN_STRING,
+    WEBPUBSUB_HUB: process.env.WEBPUBSUB_HUB,
+    NODE_ENV: process.env.NODE_ENV,
+  } as const;
+  console.log('POST /api/session start', { reqId, debugEnv });
+
   const { title, settings } = parsed.data;
-  await ensureIndexes();
+  try {
+    await ensureIndexes();
+  } catch (err: any) {
+    console.error('ensureIndexes failed', { reqId, debugEnv, message: err?.message });
+    return NextResponse.json({ error: 'Database unavailable', reqId }, { status: 503 });
+  }
+
   const sessionCode = newSessionCode(6 + Math.floor(Math.random() * 3));
   const id = newId('sess');
   const adminToken = newAdminToken();
@@ -36,10 +53,21 @@ export async function POST(req: NextRequest) {
     _ttl: 86400,
   };
 
-  await mongoUpsert({ ...session, expireAt: new Date(Date.now() + 86400 * 1000) });
-  await publishSessionEvent(sessionCode, 'session:update', { session });
+  try {
+    await mongoUpsert({ ...session, expireAt: new Date(Date.now() + 86400 * 1000) });
+  } catch (err: any) {
+    console.error('mongoUpsert failed', { reqId, debugEnv, message: err?.message });
+    return NextResponse.json({ error: 'DB write failed', reqId }, { status: 500 });
+  }
 
-  return NextResponse.json({ sessionCode, adminToken });
+  try {
+    await publishSessionEvent(sessionCode, 'session:update', { session });
+  } catch (err: any) {
+    console.warn('WebPubSub publish failed (non-fatal)', { reqId, message: err?.message });
+  }
+
+  console.log('POST /api/session success', { reqId, sessionCode });
+  return NextResponse.json({ sessionCode, adminToken, reqId });
 }
 
 export async function GET(req: NextRequest) {

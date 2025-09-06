@@ -26,7 +26,12 @@ export default function CreatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, settings: { anonymity, roundSeconds, language } }),
       });
-      if (!res.ok) throw new Error('Failed to create');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const reason = data?.error ? `: ${data.error}` : '';
+        const reqId = data?.reqId ? ` (id ${data.reqId})` : '';
+        throw new Error('Failed to create' + reason + reqId);
+      }
       const data = await res.json();
       saveAdminToken(data.sessionCode, data.adminToken);
       router.push(`/s/${data.sessionCode}`);

@@ -7,6 +7,11 @@ export async function getMongoClient(): Promise<MongoClient> {
   if (!clientPromise) {
     const env = getEnv();
     if (!env.COSMOS_CONN_STRING) throw new Error('Missing COSMOS_CONN_STRING');
+    console.log('Mongo: initializing client', {
+      hasCOSMOS_CONN_STRING: true,
+      COSMOS_DB_NAME: env.COSMOS_DB_NAME,
+      COSMOS_CONTAINER_NAME: env.COSMOS_CONTAINER_NAME,
+    });
     const client = new MongoClient(env.COSMOS_CONN_STRING, { serverSelectionTimeoutMS: 10000 });
     clientPromise = client.connect();
   }
@@ -54,5 +59,16 @@ export async function ensureIndexes(): Promise<void> {
     col.createIndex({ sessionCode: 1, type: 1, createdAt: -1 }),
   ]);
   ensured = true;
+}
+
+export async function mongoPing(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const env = getEnv();
+    const client = await getMongoClient();
+    await client.db(env.COSMOS_DB_NAME).command({ ping: 1 } as any);
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? 'unknown error' };
+  }
 }
 
