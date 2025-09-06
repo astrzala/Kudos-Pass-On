@@ -9,7 +9,7 @@ export default function CreatePage() {
   const router = useRouter();
   const [title, setTitle] = useState('Sprint Kudos');
   const [anonymity, setAnonymity] = useState(true);
-  const [roundSeconds, setRoundSeconds] = useState(90);
+  const [roundSecondsStr, setRoundSecondsStr] = useState('90');
   const [language, setLanguage] = useState<'en' | 'pl'>('en');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +19,8 @@ export default function CreatePage() {
     setError(null);
     setLoading(true);
     try {
+      const parsedRoundSeconds = parseInt(roundSecondsStr, 10);
+      const roundSeconds = Number.isFinite(parsedRoundSeconds) ? Math.min(600, Math.max(30, parsedRoundSeconds)) : 90;
       const res = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +47,14 @@ export default function CreatePage() {
           Anonymity
         </label>
         <label className="block text-sm font-medium">Round seconds
-          <Input type="number" min={30} max={600} className="mt-1" value={roundSeconds} onChange={(e) => setRoundSeconds(parseInt(e.target.value || '0'))} />
+          <Input
+            type="number"
+            min={30}
+            max={600}
+            className="mt-1"
+            value={roundSecondsStr}
+            onChange={(e) => setRoundSecondsStr(e.target.value)}
+          />
         </label>
         <label className="block text-sm font-medium">Language
           <select className="mt-1 w-full border rounded px-3 py-2" value={language} onChange={(e) => setLanguage(e.target.value as 'en' | 'pl')}>
