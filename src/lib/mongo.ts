@@ -22,7 +22,7 @@ export async function getCollection<T extends Document>(): Promise<Collection<T>
 export async function mongoUpsert<T extends Document & { id: string; sessionCode: string }>(doc: T & { expireAt?: Date }): Promise<void> {
   const col = await getCollection<T & { _id: string }>();
   const withId = { ...doc, _id: doc.id } as any;
-  await col.replaceOne({ _id: doc.id } as any, withId, { upsert: true });
+  await col.replaceOne({ _id: doc.id, sessionCode: doc.sessionCode } as any, withId, { upsert: true });
 }
 
 export async function mongoFindOne<T extends Document>(filter: Filter<T>, options?: { sort?: Sort }): Promise<T | null> {
