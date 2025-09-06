@@ -15,7 +15,7 @@ export type Env = z.infer<typeof envSchema>;
 export function getEnv(): Env {
   const parsed = envSchema.safeParse({
     COSMOS_CONN_STRING: process.env.COSMOS_CONN_STRING,
-    COSMOS_DB_NAME: process.env.COSMOS_DB_NAME ?? 'kudos',
+    COSMOS_DB_NAME: process.env.COSMOS_DB_NAME ?? 'kudospass-database',
     COSMOS_CONTAINER_NAME: process.env.COSMOS_CONTAINER_NAME ?? 'items',
     WEBPUBSUB_CONN_STRING: process.env.WEBPUBSUB_CONN_STRING,
     WEBPUBSUB_HUB: process.env.WEBPUBSUB_HUB ?? 'kudos',
