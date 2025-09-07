@@ -20,7 +20,7 @@ export function getEnv(): Env {
     WEBPUBSUB_CONN_STRING: process.env.WEBPUBSUB_CONN_STRING,
     WEBPUBSUB_HUB: process.env.WEBPUBSUB_HUB ?? 'kudos',
     ORIGIN_URL: process.env.ORIGIN_URL,
-    NODE_ENV: process.env.NODE_ENV ?? 'development',
+    NODE_ENV: process.env.NODE_ENV ?? 'production',
   });
 
   if (!parsed.success) {
