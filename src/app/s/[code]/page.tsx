@@ -18,9 +18,18 @@ export default function LobbyPage() {
   const adminToken = getAdminToken(code);
   const participant = getParticipant(code);
 
-  const { connected } = useSessionRealtime(code, (evt) => {
+  const { connected, mode } = useSessionRealtime(code, (evt) => {
     if (evt.event === 'poll:update') setData(evt.payload as Hydrate);
-    if (evt.event === 'session:update' || evt.event === 'round:start' || evt.event === 'note:submitted' || evt.event === 'moderation:update') {
+    if (evt.event === 'round:start') {
+      const payload = evt.payload as any;
+      if (typeof payload?.roundIndex === 'number') {
+        router.push(`/s/${code}/round/${payload.roundIndex}`);
+        return;
+      }
+      refresh();
+      return;
+    }
+    if (evt.event === 'session:update' || evt.event === 'note:submitted' || evt.event === 'moderation:update') {
       refresh();
     }
   });
@@ -31,6 +40,14 @@ export default function LobbyPage() {
   }
 
   useEffect(() => { refresh(); }, [code]);
+
+  // If we fetch data via polling and a round is already active, redirect joiners automatically
+  useEffect(() => {
+    const roundIndex = (data?.currentRound as any)?.index;
+    if (typeof roundIndex === 'number' && roundIndex >= 0) {
+      router.push(`/s/${code}/round/${roundIndex}`);
+    }
+  }, [data?.currentRound, code, router]);
 
   async function startRound() {
     const res = await fetch('/api/round/start', {
@@ -51,7 +68,7 @@ export default function LobbyPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Lobby — {code}</h1>
-          <p className="text-sm text-gray-600">{connected ? 'Live' : 'Polling'} • Participants: {data?.participants.length ?? 0}</p>
+          <p className="text-sm text-gray-600">{mode === 'ws' ? 'Live' : mode === 'polling' ? 'Polling' : 'Connecting…'} • Participants: {data?.participants.length ?? 0}</p>
         </div>
         {canStart && (
           <button onClick={startRound} className="rounded bg-green-600 px-4 py-2 text-white">Start Round</button>
