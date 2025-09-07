@@ -86,7 +86,8 @@ export async function GET(req: NextRequest) {
 
   const { adminToken: _admin, ...sessionPublic } = session as any;
   const participantsPublic = participants.map(({ email: _email, ...rest }) => rest);
-  const hydrate = { session: sessionPublic, participants: participantsPublic, currentRound: rounds[0] ?? null, notes };
+  const currentRound = session.status === 'running' ? (rounds[0] ?? null) : null;
+  const hydrate = { session: sessionPublic, participants: participantsPublic, currentRound, notes };
   const etag = 'W/"' + Buffer.from(JSON.stringify({
     s: session.lastActivityUtc,
     p: participants.length,
