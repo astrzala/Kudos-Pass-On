@@ -10,6 +10,7 @@ export default function CreatePage() {
   const [title, setTitle] = useState('Sprint Kudos');
   const [anonymity, setAnonymity] = useState(true);
   const [roundSecondsStr, setRoundSecondsStr] = useState('90');
+  const [roundCountStr, setRoundCountStr] = useState('1');
   const [language, setLanguage] = useState<'en' | 'pl'>('en');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,10 +22,12 @@ export default function CreatePage() {
     try {
       const parsedRoundSeconds = parseInt(roundSecondsStr, 10);
       const roundSeconds = Number.isFinite(parsedRoundSeconds) ? Math.min(600, Math.max(30, parsedRoundSeconds)) : 90;
+      const parsedRoundCount = parseInt(roundCountStr, 10);
+      const roundCount = Number.isFinite(parsedRoundCount) ? Math.min(20, Math.max(1, parsedRoundCount)) : 1;
       const res = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, settings: { anonymity, roundSeconds, language } }),
+        body: JSON.stringify({ title, settings: { anonymity, roundSeconds, language, roundCount } }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -59,6 +62,16 @@ export default function CreatePage() {
             className="mt-1"
             value={roundSecondsStr}
             onChange={(e) => setRoundSecondsStr(e.target.value)}
+          />
+        </label>
+        <label className="block text-sm font-medium">Number of rounds
+          <Input
+            type="number"
+            min={1}
+            max={20}
+            className="mt-1"
+            value={roundCountStr}
+            onChange={(e) => setRoundCountStr(e.target.value)}
           />
         </label>
         <label className="block text-sm font-medium">Language

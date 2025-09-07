@@ -2,6 +2,7 @@ export type SessionSettings = {
   anonymity: boolean;
   roundSeconds: number;
   language: 'en' | 'pl';
+  roundCount?: number;
 };
 
 export type SessionDoc = {

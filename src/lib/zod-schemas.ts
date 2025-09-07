@@ -6,6 +6,7 @@ export const createSessionSchema = z.object({
     anonymity: z.boolean(),
     roundSeconds: z.number().int().min(30).max(600),
     language: z.enum(['en', 'pl']).default('en'),
+    roundCount: z.number().int().min(1).max(20).default(1),
   }),
 });
 

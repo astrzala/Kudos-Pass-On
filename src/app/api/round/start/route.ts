@@ -24,6 +24,11 @@ export async function POST(req: NextRequest) {
   ]);
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   if (session.adminToken !== adminToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if ((participants?.length ?? 0) < 2) return NextResponse.json({ error: 'Need at least 2 participants' }, { status: 400 });
+  const maxRounds = session.settings.roundCount ?? 1;
+  if (previousRounds.length >= maxRounds) {
+    return NextResponse.json({ error: 'All rounds completed' }, { status: 400 });
+  }
 
   const participantIds = participants.map((p) => p.id);
   const usedPairs = new Set<string>();
