@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getParticipant } from '@/lib/client-store';
 import { useCountdown } from '@/lib/countdown';
+import { useRouter } from 'next/navigation';
 
 type Hydrate = {
   session: any;
@@ -11,6 +12,7 @@ type Hydrate = {
 
 export default function RoundPage() {
   const { code, i } = useParams<{ code: string; i: string }>();
+  const router = useRouter();
   const [data, setData] = useState<Hydrate | null>(null);
   const participant = getParticipant(code);
   const roundSeconds = data?.session?.settings?.roundSeconds ?? 90;
@@ -47,8 +49,11 @@ export default function RoundPage() {
       <p className="text-gray-600">Time remaining: {remaining}s</p>
       <div className="space-y-2">
         <p className="font-medium">Write a positive note for your teammate.</p>
-        <textarea className="w-full border rounded px-3 py-2 h-32" value={text} onChange={(e) => setText(e.target.value)} />
-        <button disabled={submitted} onClick={submit} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60">{submitted ? 'Submitted' : 'Submit'}</button>
+        <textarea disabled={submitted} className="w-full border rounded px-3 py-2 h-32 disabled:opacity-60" value={text} onChange={(e) => setText(e.target.value)} />
+        <div className="flex gap-2">
+          <button disabled={submitted || !text.trim()} onClick={submit} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60">{submitted ? 'Submitted' : 'Submit'}</button>
+          <button onClick={() => router.push(`/s/${code}`)} className="rounded bg-gray-200 px-4 py-2">{submitted ? 'I\'m done' : 'Skip / I\'m done'}</button>
+        </div>
       </div>
     </main>
   );
