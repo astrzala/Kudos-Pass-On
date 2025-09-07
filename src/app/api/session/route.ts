@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   } as const;
   console.log('POST /api/session start', { reqId, debugEnv });
 
-  const { title, settings } = parsed.data;
+  const { title, settings, hostName } = parsed.data as any;
   try {
     await ensureIndexes();
   } catch (err: any) {
@@ -53,8 +53,21 @@ export async function POST(req: NextRequest) {
     _ttl: 86400,
   };
 
+  let hostParticipantId: string | null = null;
   try {
     await mongoUpsert({ ...session, expireAt: new Date(Date.now() + 86400 * 1000) });
+    // Create host participant immediately
+    const host: ParticipantDoc = {
+      id: newId('part'),
+      type: 'Participant',
+      sessionCode,
+      name: hostName,
+      createdAt: now,
+      isHost: true,
+      _ttl: 86400,
+    } as ParticipantDoc;
+    await mongoUpsert({ ...host, expireAt: new Date(Date.now() + 86400 * 1000) });
+    hostParticipantId = host.id;
   } catch (err: any) {
     console.error('mongoUpsert failed', { reqId, debugEnv, message: err?.message });
     return NextResponse.json({ error: 'DB write failed', reqId }, { status: 500 });
@@ -67,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
 
   console.log('POST /api/session success', { reqId, sessionCode });
-  return NextResponse.json({ sessionCode, adminToken, reqId });
+  return NextResponse.json({ sessionCode, adminToken, hostParticipantId, reqId });
 }
 
 export async function GET(req: NextRequest) {

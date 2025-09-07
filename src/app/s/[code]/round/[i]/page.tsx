@@ -71,7 +71,7 @@ export default function RoundPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionCode: code, authorId: participant?.id, text }),
     });
-    if (res.ok) setSubmitted(true);
+    if (res.ok || res.status === 409) setSubmitted(true);
   }
 
   return (

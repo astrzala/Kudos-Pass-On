@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 export default function CreatePage() {
   const router = useRouter();
   const [title, setTitle] = useState('Sprint Kudos');
+  const [hostName, setHostName] = useState('');
   const [anonymity, setAnonymity] = useState(true);
   const [roundSecondsStr, setRoundSecondsStr] = useState('90');
   const [roundCountStr, setRoundCountStr] = useState('1');
@@ -27,7 +28,7 @@ export default function CreatePage() {
       const res = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, settings: { anonymity, roundSeconds, language, roundCount } }),
+        body: JSON.stringify({ title, hostName: hostName.trim(), settings: { anonymity, roundSeconds, language, roundCount } }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -37,6 +38,13 @@ export default function CreatePage() {
       }
       const data = await res.json();
       saveAdminToken(data.sessionCode, data.adminToken);
+      // Persist host as a participant locally to avoid showing self in lists
+      try {
+        const { saveParticipant } = await import('@/lib/client-store');
+        if (data.hostParticipantId) {
+          saveParticipant(data.sessionCode, { id: data.hostParticipantId, name: hostName.trim() });
+        }
+      } catch {}
       router.push(`/s/${data.sessionCode}`);
     } catch (err: any) {
       setError(err.message || 'Error');
@@ -47,6 +55,9 @@ export default function CreatePage() {
     <main className="max-w-xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Create Session</h1>
       <form onSubmit={onSubmit} className="space-y-4">
+        <label className="block text-sm font-medium">Your name (host)
+          <Input className="mt-1" value={hostName} onChange={(e) => setHostName(e.target.value)} />
+        </label>
         <label className="block text-sm font-medium">Title
           <Input className="mt-1" value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>

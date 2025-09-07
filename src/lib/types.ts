@@ -27,6 +27,7 @@ export type ParticipantDoc = {
   sessionCode: string;
   name: string;
   email?: string;
+  isHost?: boolean;
   createdAt: string;
   _ttl?: number;
 };
