@@ -8,6 +8,7 @@ export const createSessionSchema = z.object({
     language: z.enum(['en', 'pl']).default('en'),
     roundCount: z.number().int().min(1).max(20).default(1),
   }),
+  hostName: z.string().min(1).max(50),
 });
 
 export const joinSchema = z.object({

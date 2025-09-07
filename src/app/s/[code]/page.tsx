@@ -78,9 +78,11 @@ export default function LobbyPage() {
         <p className="text-yellow-700">You have not joined. Go to Join page.</p>
       )}
       <ul className="grid grid-cols-2 gap-2">
-        {data?.participants.map((p) => (
-          <li key={p.id} className="border rounded px-3 py-2">{p.name}</li>
-        ))}
+        {data?.participants
+          .filter((p) => p.id !== participant?.id)
+          .map((p) => (
+            <li key={p.id} className="border rounded px-3 py-2">{p.name}</li>
+          ))}
       </ul>
     </main>
   );

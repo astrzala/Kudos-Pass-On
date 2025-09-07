@@ -27,6 +27,16 @@ export async function POST(req: NextRequest) {
   const mapping = round.mappings.find((m) => m.from === authorId);
   if (!mapping) return NextResponse.json({ error: 'No target assigned' }, { status: 400 });
 
+  // Ensure only one note per author per round
+  const existing = await mongoFindOne<NoteDoc>({
+    type: 'Note',
+    sessionCode,
+    roundIndex: round.index,
+    authorId,
+    $or: [{ softDeleted: { $exists: false } }, { softDeleted: false }],
+  } as any);
+  if (existing) return NextResponse.json({ error: 'Already submitted' }, { status: 409 });
+
   const positivity = checkPositivity(text);
   if (!positivity.ok) return NextResponse.json({ error: positivity.hint ?? 'Not allowed' }, { status: 400 });
 
